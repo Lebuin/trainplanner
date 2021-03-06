@@ -8,8 +8,8 @@ const Crawlers = crawlerNames.map(crawlerName => {
   return require(crawlerPath);
 });
 
-const CRAWL_FROM = new Date('2021-03-03 00:00:00Z');
-const CRAWL_UNTIL = new Date('2021-03-04 00:00:00Z');
+const CRAWL_FROM = new Date('2021-03-15 00:00:00Z');
+const CRAWL_UNTIL = new Date('2021-03-16 00:00:00Z');
 
 async function main() {
   await sequelize.sync();

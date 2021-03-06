@@ -1,14 +1,19 @@
+const util = require('util');
+
 class Route {
-  static buildId(stops) {
-    return stops
+  static buildId(stops, takesBikes) {
+    let stopStr = stops
       .map(stop => stop.id)
       .join('-');
+
+    return util.format('%s:%s', stopStr, takesBikes);
   }
 
 
-  constructor(stops) {
-    this.id = Route.buildId(stops);
+  constructor(stops, takesBikes) {
+    this.id = Route.buildId(stops, takesBikes);
     this.stops = stops;
+    this.takesBikes = takesBikes;
     this.trips = [];
 
     for(let i = 0; i < stops.length; i++) {

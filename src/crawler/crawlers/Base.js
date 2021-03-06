@@ -24,7 +24,7 @@ class BaseCrawler {
         stop.crawledUntil = from;
       }
 
-      await this.crawlStopBatch(stop);
+      await this.crawlBatchAtStop(stop);
     }
   }
 
@@ -82,7 +82,7 @@ class BaseCrawler {
     throw new Error('Implement me');
   }
 
-  async crawlStopBatch(stop) {  // eslint-disable-line no-unused-vars
+  async crawlBatchAtStop(stop) {  // eslint-disable-line no-unused-vars
     throw new Error('Implement me');
   }
 }

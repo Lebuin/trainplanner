@@ -54,13 +54,14 @@ class Journey {
 
   printTable() {
     let table = new Table({
-      head: ['From', 'To', 'Departure', 'Arrival'],
+      head: ['From', 'At', 'Train', 'To', 'At'],
     });
     for(let i = 0; i < this.legs.length; i++) {
       table.push([
         this.getStop(i).name,
-        this.getStop(i + 1).name,
         this.getTripDeparture(i).toISOString(),
+        this.legs[i].trip.name,
+        this.getStop(i + 1).name,
         this.getTripArrival(i).toISOString(),
       ])
     }

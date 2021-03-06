@@ -6,6 +6,15 @@ const sequelize = require('../../db');
 const models = sequelize.models;
 const autoBind = require('auto-bind');
 
+sncbProfile.locale = 'nl-BE';
+
+// Override the default language to Dutch.
+const origTransformReqBody = sncbProfile.transformReqBody;
+sncbProfile.transformReqBody = ({opt}, body) => {
+  opt.language = opt.language || 'nl';
+  return origTransformReqBody({opt}, body);
+};
+
 const retryingSncbProfile = withRetrying(sncbProfile, {
   retries: 3,
   minTimeout: 5 * 1000,
@@ -61,7 +70,7 @@ class NMBSCrawler extends BaseCrawler {
   }
 
 
-  async crawlStopBatch(stop) {
+  async crawlBatchAtStop(stop) {
     let crawlFrom = stop.crawledUntil;
     let crawlUntil = new Date(stop.crawledUntil.getTime() + BATCH_SIZE * 60 * 1000)
     console.info(
@@ -125,6 +134,8 @@ class NMBSCrawler extends BaseCrawler {
       let trip = await models.Trip.create({
         source: this.source,
         sourceId: tripInfo.id,
+        name: tripInfo.line.name,
+        takesBikes: this.takesBikes(tripInfo),
       }, { transaction: t });
 
       for(let stopover of stopovers) {
@@ -136,6 +147,11 @@ class NMBSCrawler extends BaseCrawler {
     });
 
     return trip;
+  }
+
+
+  takesBikes(tripInfo) {
+    return tripInfo.line.product !== 'high-speed-train';
   }
 }
 

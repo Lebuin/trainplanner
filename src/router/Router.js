@@ -35,7 +35,7 @@ class Router {
   async buildRoutes() {
     let dbTrips = await models.Trip.findAll();
     for(let dbTrip of dbTrips) {
-      let trip = new Trip(dbTrip.id);
+      let trip = new Trip(dbTrip.id, dbTrip.name, dbTrip.takesBikes);
       this.trips[trip.id] = trip;
     }
 
@@ -53,7 +53,7 @@ class Router {
     // TODO: building routes should happen offline, once
     for(let trip of this.trips) {
       if(trip) {
-        let route = this.getOrCreateRoute(trip.stops);
+        let route = this.getOrCreateRoute(trip.stops, trip.takesBikes);
         trip.setRoute(route);
       }
     }
@@ -62,10 +62,10 @@ class Router {
   }
 
 
-  getOrCreateRoute(stops) {
-    let id = Route.buildId(stops);
+  getOrCreateRoute(stops, takesBikes) {
+    let id = Route.buildId(stops, takesBikes);
     if(!(id in this.routes)) {
-      let route = new Route(stops);
+      let route = new Route(stops, takesBikes);
       this.routes[route.id] = route;
     }
     return this.routes[id];
@@ -88,14 +88,14 @@ class Router {
     if(toDate == null) {
       departures = [fromDate];
     } else {
-      departures = this.getTripDepartures(fromStop, fromDate, toDate);
+      departures = this.getTripDepartures(fromStop, fromDate, toDate, withBike);
     }
     let arrivals = [];
     let journeys = [];
 
     let start = myUtil.time();
     for(let departure of departures) {
-      let connections = this.runRangeRouter(fromStop, toStop, departure, arrivals);
+      let connections = this.runRouter(fromStop, toStop, departure, withBike, arrivals);
       journeys.push(...this.buildJourneys(connections, toStop));
     }
     let end = myUtil.time();
@@ -108,13 +108,15 @@ class Router {
   }
 
 
-  getTripDepartures(stop, fromDate, toDate) {
+  getTripDepartures(stop, fromDate, toDate, withBike) {
     let departures = new Set();
     for(let [route, stopoverIndex] of stop.routes) {
-      let trips = this.findTripsBetween(route, stopoverIndex, fromDate, toDate);
-      for(let trip of trips) {
-        let departure = trip.schedule[stopoverIndex][1];
-        departures.add(departure);
+      if(route.takesBikes || !withBike) {
+        let trips = this.findTripsBetween(route, stopoverIndex, fromDate, toDate);
+        for(let trip of trips) {
+          let departure = trip.schedule[stopoverIndex][1];
+          departures.add(departure);
+        }
       }
     }
 
@@ -124,7 +126,7 @@ class Router {
   }
 
 
-  runRangeRouter(fromStop, toStop, departure, arrivals) {
+  runRouter(fromStop, toStop, departure, withBike, arrivals) {
     // This is the rRAPTOR variant of the algorithm. This means the local pruning is not
     // implemented, even when you are using this for instant queries. This shouldn't be a problem:
     // instant queries are fast anyways.
@@ -162,7 +164,7 @@ class Router {
       }
 
       /***Accumulate routes serving marked stops from previous round***/
-      let routesToTraverse = this.getRoutesToTraverse(markedStops);
+      let routesToTraverse = this.getRoutesToTraverse(markedStops, withBike);
       markedStops = new Set();
 
       /***Traverse each route***/
@@ -210,12 +212,14 @@ class Router {
   }
 
 
-  getRoutesToTraverse(markedStops) {
+  getRoutesToTraverse(markedStops, withBike) {
     let queue = new Map();
     for(let stop of markedStops) {
       for(let [route, stopoverIndex] of stop.routes) {
-        // If this is the last stop in the route, we can't traverse it.
-        if(stopoverIndex < route.stops.length - 1) {
+        if(
+          route.takesBikes || !withBike
+          && stopoverIndex < route.stops.length - 1
+        ) {
           if(queue.has(route)) {
             queue.set(route, Math.min(queue.get(route), stopoverIndex));
           } else {

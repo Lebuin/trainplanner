@@ -1,6 +1,9 @@
 class Trip {
-  constructor(id) {
+  constructor(id, name, takesBikes) {
     this.id = id;
+    this.name = name;
+    this.takesBikes = takesBikes;
+
     this.route = null;
     this.stops = [];
     // Every schedule item is a tuple (arrival, departure)

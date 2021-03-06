@@ -12,6 +12,14 @@ function tripFactory(sequelize) {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    takesBikes: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+    },
   }, {
     sequelize,
     modelName: 'Trip',
