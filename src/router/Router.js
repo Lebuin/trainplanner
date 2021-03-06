@@ -73,7 +73,7 @@ class Router {
 
 
 
-  run(fromStopId, toStopId, fromDate, toDate) {
+  run(fromStopId, toStopId, fromDate, toDate, withBike) {
     let fromStop = this.stops[fromStopId];
     if(fromStop == null) {
       throw new Error(`Stop ${fromStopId} does not exist`);

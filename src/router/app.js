@@ -1,34 +1,51 @@
 const Router = require('./Router');
+const { ArgumentParser } = require('argparse');
+const myUtil = require('../util');
 
 
 main();
 
 
 async function main() {
-  let args = process.argv.slice(2);
-  await runRouter(...args);
-}
+  let parser = new ArgumentParser({
+    description: 'Calculate train routes between two stops',
+  });
 
-
-async function runRouter(from, to, fromDateStr, toDateStr) {
-  if(fromDateStr == null) {
-    throw new Error('Usage: node app.js from  to date');
-  }
-
-  let fromDate = new Date(fromDateStr);
-  if(isNaN(fromDate)) {
-    throw new Error('Invalid date: ' + fromDateStr);
-  }
-
-  let toDate = null;
-  if(toDateStr) {
-    toDate = new Date(toDateStr);
-    if(isNaN(toDate)) {
-      throw new Error('Invalid date: ' + toDateStr);
+  parser.register('type', 'date', string => {
+    let result = new Date(string);
+    if(isNaN(result)) {
+      throw new TypeError('could not convert string to date: ' + string);
     }
-  }
+    return result
+  });
+
+  parser.addArgument('from', {
+    type: 'int',
+    help: 'The id of the departure stop.',
+  });
+  parser.addArgument('to', {
+    type: 'int' ,
+    help: 'The id of the arrival stop.',
+  });
+  parser.addArgument('from-date', {
+    type: 'date',
+    help: 'The time of departure, as an ISO 8601 string.',
+  });
+  parser.addArgument('to-date', {
+    type: 'date',
+    nargs: '?',
+    help: 'If passed, a range query is performed from fromDate to toDate.',
+  });
+  parser.addArgument(['-b', '--with-bike'], {
+    action: 'storeTrue',
+    help: 'Show routes that take bikes.',
+  });
+
+
+  let rawArgs = parser.parseArgs();
+  let args = myUtil.keysToCamelCase(rawArgs);
 
   let router = new Router();
   await router.init();
-  await router.run(from, to, fromDate, toDate);
+  await router.run(args.from, args.to, args.fromDate, args.toDate, args.withBike);
 }
