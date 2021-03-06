@@ -10,7 +10,7 @@ const retryingSncbProfile = withRetrying(sncbProfile, {
   retries: 3,
   minTimeout: 5 * 1000,
   factor: 2,
-})
+});
 
 
 const SHOULD_FETCH_PRODUCT_TYPES = {

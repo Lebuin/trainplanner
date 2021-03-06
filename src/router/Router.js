@@ -82,40 +82,27 @@ class Router {
       throw new Error(`Stop ${toStopId} does not exist`);
     }
 
-    let start = myUtil.time();
-    let journeys = toDate == null ?
-      this.runQuery(fromStop, toStop, fromDate) :
-      this.runRangeQuery(fromStop, toStop, fromDate, toDate);
-    let end = myUtil.time();
-
-    console.log('Elapsed time: %s s', (end - start) / 1000);
-    journeys.sort((j1, j2) => j1.departure - j2.departure);
-    this.printJourneys(journeys, fromStop, toStop);
-  }
-
-
-  runQuery(fromStop, toStop, fromDate) {
-    let connections = this.runRouter(fromStop, toStop, fromDate);
-    let journeys = this.buildJourneys(connections, toStop);
-    return journeys;
-  }
-
-
-  runRangeQuery(fromStop, toStop, fromDate, toDate) {
-    let journeys = [];
+    let departures;
+    if(toDate == null) {
+      departures = [fromDate];
+    } else {
+      departures = this.getTripDepartures(fromStop, fromDate, toDate);
+    }
     let arrivals = [];
-    arrivals[0] = Array(this.stops.length).fill(Infinity);
+    let journeys = [];
 
-    let departures = this.getTripDepartures(fromStop, fromDate, toDate);
-    departures.reverse();
+    let start = myUtil.time();
     for(let departure of departures) {
       let connections = this.runRangeRouter(fromStop, toStop, departure, arrivals);
       journeys.push(...this.buildJourneys(connections, toStop));
     }
+    let end = myUtil.time();
 
-    journeys = journeys.filter(journey => journey.departure < toDate);
-
-    return journeys;
+    console.log('Elapsed time: %s s', (end - start) / 1000);
+    journeys = journeys
+      .sort((j1, j2) => j1.departure - j2.departure)
+      .filter(journey => toDate == null || journey.departure < toDate);
+    this.printJourneys(journeys, fromStop, toStop);
   }
 
 
@@ -130,74 +117,15 @@ class Router {
     }
 
     departures = Array.from(departures);
-    departures.sort();
+    departures.sort().reverse();
     return departures;
   }
 
 
-  runRouter(fromStop, toStop, fromDate) {
-    // Comments like /***this***/ are references to the original RAPTOR algorithm as described
-    // in the paper "Round-Based Public Transit Routing"
-
-    /***Initialization of the algorithm***/
-    let arrivals = [];
-    let connections = [];
-    arrivals[0] = Array(this.stops.length).fill(Infinity);
-    connections[0] = [];
-    let bestArrivals = Array(this.stops.length).fill(Infinity);
-    let round = 0;
-
-    // Initialize the first round
-    arrivals[0][fromStop.id] = fromDate;
-    bestArrivals[fromStop.id] = fromDate;
-    let markedStops = new Set([fromStop]);
-
-    while(markedStops.size > 0) {  /***foreach k ← 1, 2,... do***/
-      round++;
-      arrivals[round] = Array(this.stops.length).fill(Infinity);
-      connections[round] = [];
-
-      /***Accumulate routes serving marked stops from previous round***/
-      let routesToTraverse = this.getRoutesToTraverse(markedStops);
-      markedStops = new Set();
-
-      /***Traverse each route***/
-      for(let [route, minStopoverIndex] of routesToTraverse) {
-        let trip = null;
-        let boardingStopoverIndex = null;
-
-        for(
-          let stopoverIndex = minStopoverIndex;
-          stopoverIndex < route.stops.length;
-          stopoverIndex++
-        ) {
-          /***Can the label be improved in this round? Includes local and target pruning***/
-          let stop = route.stops[stopoverIndex];
-          if(trip) {
-            let arrival = trip.schedule[stopoverIndex][0];
-            if(arrival < Math.min(bestArrivals[stop.id], bestArrivals[toStop.id])) {
-              arrivals[round][stop.id] = arrival;
-              bestArrivals[stop.id] = arrival;
-              connections[round][stop.id] = [trip, boardingStopoverIndex, stopoverIndex];
-              markedStops.add(stop);
-            }
-          }
-
-          /***Can we catch an earlier tripat p_i?***/
-          let previousArrival = arrivals[round - 1][stop.id];
-          if(previousArrival && (!trip || previousArrival <= trip.schedule[stopoverIndex][1])) {
-            trip = this.findEarliestTrip(route, stopoverIndex, previousArrival);
-            boardingStopoverIndex = stopoverIndex;
-          }
-        }
-      }
-    }
-
-    return connections;
-  }
-
-
   runRangeRouter(fromStop, toStop, departure, arrivals) {
+    // This is the rRAPTOR variant of the algorithm. This means the local pruning is not
+    // implemented, even when you are using this for instant queries. This shouldn't be a problem:
+    // instant queries are fast anyways.
     // Comments like /***this***/ are references to the original RAPTOR algorithm as described
     // in the paper "Round-Based Public Transit Routing"
 
@@ -205,6 +133,13 @@ class Router {
     let connections = [];
     connections[0] = [];
     let round = 0;
+
+    if(arrivals == null) {
+      arrivals = [];
+    }
+    if(arrivals.length === 0) {
+      arrivals[0] = Array(this.stops.length).fill(Infinity);
+    }
 
     // Initialize the first round
     arrivals[0][fromStop.id] = departure;
