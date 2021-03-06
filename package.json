@@ -1,0 +1,23 @@
+{
+  "name": "trainplanner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "auto-bind": "^4.0.0",
+    "cli-table": "^0.3.5",
+    "hafas-client": "^5.15.1",
+    "sequelize": "^6.5.0",
+    "sqlite3": "^5.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^7.21.0",
+    "eslint-plugin-import": "^2.22.1"
+  }
+}
