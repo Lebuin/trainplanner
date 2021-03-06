@@ -12,6 +12,8 @@ class Router {
     this.stops = [];
     this.routes = {};
     this.trips = [];
+
+    this.transferTime = 5 * 60 * 1000;  // 10 minutes
   }
 
 
@@ -153,7 +155,9 @@ class Router {
         arrivals[round] = arrivals[round - 1].slice();
       } else {
         for(let i = 0; i < this.stops.length; i++) {
-          arrivals[round][i] = Math.min(arrivals[round - 1][i], arrivals[round][i])
+          if(arrivals[round - 1][i] < arrivals[round][i]) {
+            arrivals[round][i] = arrivals[round - 1][i];
+          }
         }
       }
 
@@ -184,9 +188,19 @@ class Router {
 
           /***Can we catch an earlier tripat p_i?***/
           let previousArrival = arrivals[round - 1][stop.id];
-          if(previousArrival && (!trip || previousArrival <= trip.schedule[stopoverIndex][1])) {
-            trip = this.findEarliestTrip(route, stopoverIndex, previousArrival);
-            boardingStopoverIndex = stopoverIndex;
+          if(isFinite(previousArrival)) {
+            let previousDeparture = new Date(previousArrival.getTime() + this.transferTime);
+            if(!trip || previousDeparture <= trip.schedule[stopoverIndex][1]) {
+              let newTrip = this.findEarliestTrip(
+                route,
+                stopoverIndex,
+                previousDeparture,
+              );
+              if(newTrip !== trip) {
+                trip = newTrip;
+                boardingStopoverIndex = stopoverIndex;
+              }
+            }
           }
         }
       }
